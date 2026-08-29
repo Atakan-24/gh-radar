@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Once a week. This tool talks to an API it does not control, and the
+    # failure that matters is not a bad commit -- it is GitHub changing a
+    # response shape while nobody is pushing. A test suite that only runs on
+    # push cannot catch that.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install pytest
+      - run: python -m pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check .
+
+  no-dependencies:
+    # The promise on the tin. Installed into a bare interpreter with nothing
+    # but the standard library available, so a stray import cannot slip in
+    # unnoticed behind a dependency the developer happens to have locally.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: import every module with an empty environment
+        run: python -c "import radar, radar.github, radar.score, radar.scout, radar.watch, radar.report, radar.__main__"
+      - name: the CLI must run without a token
+        run: python -m radar --dry-run
+
+  read-only:
+    # This tool must never be able to write to GitHub. That is enforced in
+    # code (github.request refuses any method but GET) and asserted here, so
+    # a future change that adds a POST fails the build rather than shipping.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: the HTTP layer refuses non-GET
+        run: |
+          python - <<'PY'
+          import sys
+          from radar import github
+          try:
+              github.request("/user", method="POST")
+          except github.GitHubError as err:
+              assert "read-only" in str(err), err
+              print("refused as expected:", err)
+              sys.exit(0)
+          sys.exit("FAIL: a non-GET request was not refused")
+          PY
+      - name: no write verbs anywhere in the package
+        run: |
+          if grep -rnE '"(POST|PUT|PATCH|DELETE)"' radar/ ; then
+            echo "FAIL: a write verb appears in the package"
+            exit 1
+          fi
+          echo "no write verbs present"
+
+  secrets:
+    # The tools check each other: this repo is scanned by the secret scanner
+    # from the same author, cloned fresh so the check cannot rot.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: git clone --depth 1 https://github.com/Atakan-24/git-secret-scan /tmp/gss
+      - run: python /tmp/gss/scan.py --tracked

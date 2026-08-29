@@ -1,0 +1,34 @@
+[project]
+name = "gh-radar"
+version = "0.1.0"
+description = "A daily read of what actually needs you on GitHub"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+gh-radar = "radar.__main__:main"
+
+[tool.ruff]
+# Wider than the default 88. The alternative is wrapping explanatory
+# comments into ribbons, and the comments in score.py are the part of this
+# project worth reading.
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "C4", "SIM"]
+ignore = [
+  # The fallback paths deliberately catch broadly: a repository lookup that
+  # fails for any reason must degrade one suggestion, never take down the
+  # whole digest. Narrowing these to known exception types would mean an
+  # unanticipated failure crashes the morning run instead of skipping a row.
+  "BLE001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures assert on hard-coded sample data; that is the point of them.
+"tests/*" = ["S101"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
