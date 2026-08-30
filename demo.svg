@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="905" height="426" viewBox="0 0 905 426">
+  <rect width="905" height="426" rx="8" fill="#1e1e2e"/>
+  <rect width="905" height="36" rx="8" fill="#2a2a3d"/>
+  <rect y="26" width="905" height="20" fill="#2a2a3d"/>
+  <circle cx="20" cy="18" r="6" fill="#ff5f56"/>
+  <circle cx="40" cy="18" r="6" fill="#ffbd2e"/>
+  <circle cx="60" cy="18" r="6" fill="#27c93f"/>
+  <text x="453" y="22" fill="#9a9ab0" font-family="SFMono-Regular,Consolas,Liberation Mono,Menlo,monospace" font-size="12" text-anchor="middle">gh-radar</text>
+  <g font-family="SFMono-Regular,Consolas,Liberation Mono,Menlo,monospace" font-size="14">
+    <text x="20" y="60.0" fill="#8fe3a1" xml:space="preserve">$ python -m radar</text><text x="20" y="80.0" fill="#e6e6e6" xml:space="preserve"></text><text x="20" y="100.0" fill="#e6e6e6" xml:space="preserve">GH RADAR</text><text x="20" y="120.0" fill="#e6e6e6" xml:space="preserve"></text><text x="20" y="140.0" fill="#e6e6e6" xml:space="preserve">SOMEONE IS WAITING ON YOU</text><text x="20" y="160.0" fill="#e6e6e6" xml:space="preserve"></text><text x="20" y="180.0" fill="#e6e6e6" xml:space="preserve">ISSUE on you/your-tool, unanswered</text><text x="20" y="200.0" fill="#e6e6e6" xml:space="preserve">  Crash when the config file is empty</text><text x="20" y="220.0" fill="#e6e6e6" xml:space="preserve">  by someone, waiting 26h</text><text x="20" y="240.0" fill="#e6e6e6" xml:space="preserve">  https://github.com/you/your-tool/issues/12</text><text x="20" y="260.0" fill="#e6e6e6" xml:space="preserve"></text><text x="20" y="280.0" fill="#e6e6e6" xml:space="preserve">WORTH A LOOK</text><text x="20" y="300.0" fill="#e6e6e6" xml:space="preserve"></text><text x="20" y="320.0" fill="#e6e6e6" xml:space="preserve">acme/parser  (~30 min)</text><text x="20" y="340.0" fill="#e6e6e6" xml:space="preserve">  Improve the error message when the schema is missing</text><text x="20" y="360.0" fill="#e6e6e6" xml:space="preserve">  + labelled &#x27;good first issue&#x27;; Python — a language you actually ship in; opened in the last two weeks</text><text x="20" y="380.0" fill="#e6e6e6" xml:space="preserve">  ! 1,200 open issues — yours may not be seen</text><text x="20" y="400.0" fill="#e6e6e6" xml:space="preserve">  https://github.com/acme/parser/issues/903</text>
+  </g>
+</svg>

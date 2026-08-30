@@ -30,6 +30,8 @@ acme/parser  (~30 min)
   https://github.com/acme/parser/issues/903
 ```
 
+<img src="demo.svg" alt="gh-radar's daily digest: an unanswered issue on your own repo, and one scored suggestion elsewhere" width="640">
+
 ---
 
 ## Why
