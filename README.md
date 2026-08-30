@@ -46,6 +46,38 @@ Meanwhile the standard advice for building an engineering reputation is
 `label:"good first issue"` — returns **72,000 open issues**. The top of
 that list is not a shortlist. It is whatever was indexed most recently.
 
+## Architecture
+
+```
+                     __main__.py  (CLI, orchestration, state)
+                    /                                        \
+              watch.py                                   scout.py
+        your own repos:                             issues elsewhere:
+        issues waiting on you,                       search -> disqualify
+        CI status, releases,                         -> score -> top N
+        traffic, diffs                                     |
+                    \                                  score.py
+                     \                            (hard exclusions +
+                      \                             weighted scoring)
+                       \                                  /
+                        \                                /
+                         github.py  (GET-only HTTP client)
+                                       |
+                                 GitHub REST API
+
+              watch_results + scout_result + news
+                                       |
+                                 report.py  (renders one digest;
+                                 imports nothing from the other
+                                 four modules' logic, only their output)
+```
+
+Two things this shape is doing on purpose: every module that touches the
+network goes through `github.py`, so the read-only constraint below has
+exactly one place to hold; and `report.py` never calls the API or the
+scorer itself, so a rendering change cannot accidentally change what gets
+found or excluded.
+
 ## What it does not do
 
 It cannot write to GitHub. Not "does not by default" — it cannot: the HTTP
