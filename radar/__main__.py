@@ -1,8 +1,25 @@
 #!/usr/bin/env python3
-"""CLI orchestration and local digest state.
+"""gh-radar — one command, one honest answer to "what needs me on GitHub today".
 
-Run python -m radar --help for options, or --dry-run for a synthetic offline
-digest. GitHub access is read-only; state is written locally."""
+    python -m radar                       # print the digest
+    python -m radar --user someone        # somebody else's public repos
+    python -m radar --languages Python,TypeScript
+    python -m radar --json                # machine-readable, for a notifier
+    python -m radar --dry-run             # no network; prove the wiring works
+
+The entry point lives inside the package rather than beside it. A top-level
+radar.py next to a radar/ package shadow each other depending on how Python
+is invoked -- which showed up first as an import error in the test suite,
+and would have shown up later as a scheduled job that ran the wrong file.
+
+Read-only against GitHub. It cannot open a pull request, leave a comment, or
+push a commit -- the HTTP layer refuses any method other than GET. What it
+produces is a short list; a person still decides and acts.
+
+That restriction is the point rather than a limitation. Automated activity
+is against GitHub's acceptable use policy and, more to the point, a profile
+padded with generated contributions is worth less than an empty one.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +27,6 @@ import argparse
 import datetime as dt
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 from radar import github, report, scout, watch
@@ -45,31 +61,18 @@ def load_state(path: Path) -> dict:
     """
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            return {}
-        for key in ('seen_issues', 'repos'):
-            if key in data and not isinstance(data[key], dict):
-                return {}
-        if any(not isinstance(v, dict) for v in data.get('repos', {}).values()):
-            return {}
-        return data
+        return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}
 
 
 def save_state(path: Path, state: dict) -> None:
-    tmp = None
+    tmp = path.with_suffix(".tmp")
     try:
-        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
-                                         prefix=path.name + '.', delete=False) as stream:
-            tmp = Path(stream.name)
-            stream.write(json.dumps(state, indent=2))
+        tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
         tmp.replace(path)
     except OSError as err:
         print(f"warning: could not persist state to {path}: {err}", file=sys.stderr)
-    finally:
-        if tmp is not None:
-            tmp.unlink(missing_ok=True)
 
 
 def prune_seen(seen: dict, now: dt.datetime) -> dict:
@@ -79,8 +82,6 @@ def prune_seen(seen: dict, now: dt.datetime) -> dict:
         try:
             when = dt.datetime.fromisoformat(str(iso))
         except ValueError:
-            continue
-        if when.tzinfo is None:
             continue
         if when > cutoff:
             out[url] = iso
