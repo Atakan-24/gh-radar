@@ -1,21 +1,7 @@
-"""Scoring contribution opportunities.
+"""Heuristic issue ranking.
 
-The search API is not the hard part. A single `label:"good first issue"`
-query returns tens of thousands of results, and the top of that list is
-mostly noise -- abandoned repositories, issues three people are already
-arguing about, and one-line tickets that need a week of clarification
-before a single character can be written.
-
-So this module is the actual product. Every signal below is named, carries
-its own weight, and reports why it fired, because a digest that says "here
-are 3 issues" without saying *why those three* is a list nobody trusts
-twice.
-
-Honest about the numbers: these weights are heuristics, not measurements.
-Nobody has run a controlled study of which issues turn into merged PRs.
-What makes them defensible is that each one has a refutation condition
-written next to it -- the observation that would prove it wrong.
-"""
+Each weighted signal records its reason. Weights are hand-selected, not
+measured effort estimates; exclusions remove unsuitable candidates first."""
 
 from __future__ import annotations
 
