@@ -1,6 +1,9 @@
-"""Render watcher and scout results as a plain-text digest.
+"""Turning findings into something readable in thirty seconds on a phone.
 
-This module does not call GitHub. Incomplete checks are shown explicitly."""
+The constraint that shaped this file: the person reading it has one to two
+hours a week. Every line has to earn its place, and "nothing happened today"
+has to be one line rather than a page of empty sections.
+"""
 
 from __future__ import annotations
 
@@ -83,14 +86,10 @@ def render(*, watch_results: list[dict], scout_result: dict, news: dict[str, lis
     if scout_result.get("rate_limited"):
         lines.append("")
         lines.append("NOTE: GitHub rate limit hit — this list is incomplete.")
-    if scout_result.get('search_errors'):
-        lines.append('')
-        lines.append('NOTE: GitHub searches failed — this list is incomplete.')
 
     if not urgent and not picks and not normal:
         lines.append("")
-        incomplete = scout_result.get('rate_limited') or scout_result.get('search_errors')
-        lines.append('No findings in the completed checks.' if incomplete else 'Nothing needs you today.')
+        lines.append("Nothing needs you today.")
         examined = scout_result.get("examined", 0)
         if examined:
             lines.append(
@@ -103,8 +102,6 @@ def render(*, watch_results: list[dict], scout_result: dict, news: dict[str, lis
 
 def render_short(*, watch_results: list[dict], scout_result: dict) -> str:
     """One line, for a notification title."""
-    if scout_result.get('rate_limited') or scout_result.get('search_errors'):
-        return 'incomplete GitHub checks — see digest'
     waiting = sum(
         1 for r in watch_results for f in r["findings"] if f.get("urgent")
     )

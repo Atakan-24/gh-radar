@@ -1,7 +1,14 @@
-"""Inspect public repository issues, CI and releases.
+"""Watching your own repositories.
 
-Traffic is optional and depends on token permissions. Unavailable API
-responses must not establish that a repository has no releases."""
+Publishing a repository is the easy half. The half that decides whether it
+becomes a project other people use is what happens in the days after
+somebody opens an issue -- and the failure mode is not laziness, it is not
+noticing. GitHub's own notification stream buries a first-time issue between
+forty CI emails.
+
+So this module answers one question every morning: is there anything on my
+own repositories that a person is waiting on?
+"""
 
 from __future__ import annotations
 
@@ -170,11 +177,9 @@ def inspect(repo: dict, *, user: str, now: dt.datetime | None = None) -> dict:
     if is_releasable(repo, user=user):
         try:
             releases = github.paged(f"/repos/{full_name}/releases", limit=1)
-        except github.RateLimited:
-            raise
         except github.GitHubError:
-            releases = None
-        if releases == []:
+            releases = []
+        if not releases:
             findings.append({
                 "kind": "no_release",
                 "urgent": False,

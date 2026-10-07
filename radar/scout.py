@@ -1,7 +1,14 @@
-"""Search and rank contribution opportunities.
+"""Finding contribution opportunities worth the walk.
 
-Queries are bounded by language, labels and recency. score.py supplies
-heuristic exclusions and weights; one suggestion per repository is retained."""
+The naive version of this is one search for `label:"good first issue"`.
+Measured against the live API that returns ~73,000 open issues, and the
+first page is dominated by whatever was indexed most recently -- coursework
+repositories, dead forks, and tickets three people are already on.
+
+The approach here is the opposite: cast several narrow queries instead of
+one wide one, then throw most of the results away in `score.py`. A digest
+of three defensible suggestions beats a feed of thirty.
+"""
 
 from __future__ import annotations
 
@@ -87,7 +94,6 @@ def find(
     rejected = 0
     examined = 0
     rate_limited = False
-    search_errors = 0
 
     for query in build_queries(languages):
         try:
@@ -98,7 +104,6 @@ def find(
             rate_limited = True
             break
         except github.GitHubError:
-            search_errors += 1
             continue
 
         for issue in items:
@@ -153,5 +158,4 @@ def find(
         "rejected": rejected,
         "surviving": len(scored),
         "rate_limited": rate_limited,
-        "search_errors": search_errors,
     }

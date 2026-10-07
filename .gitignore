@@ -11,5 +11,3 @@ venv/
 .gh-radar-state.json
 *.state.json
 state.json
-
-build/
