@@ -1,12 +1,7 @@
-"""Minimal GitHub REST client.
+"""GitHub REST client using the standard library.
 
-No dependencies on purpose. This runs as a scheduled job on a machine where
-adding a package is a maintenance cost nobody pays back, and where a broken
-transitive dependency would take the daily run down silently.
-
-Only reads. Nothing in this module can create, edit, or delete anything on
-GitHub -- see `request()`, which refuses any method other than GET.
-"""
+GET-only requests and redirects are restricted to api.github.com. Search
+and core API limits are handled separately; credentials come from the environment."""
 
 from __future__ import annotations
 
@@ -29,6 +24,21 @@ SEARCH_PAUSE_S = 2.2
 
 class GitHubError(RuntimeError):
     pass
+
+
+def _validate_api_url(url: str) -> None:
+    parsed = urllib.parse.urlsplit(url)
+    if (parsed.scheme != 'https' or parsed.netloc.lower() != 'api.github.com'
+            or parsed.username is not None or parsed.fragment):
+        raise GitHubError('refusing URL outside https://api.github.com')
+
+
+class APIOnlyRedirect(urllib.request.HTTPRedirectHandler):
+    """Validate redirect destinations before urllib copies request headers."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_api_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class RateLimited(GitHubError):
@@ -77,8 +87,7 @@ def request(path: str, params: dict | None = None, *, method: str = "GET") -> tu
     url = path if path.startswith("http") else f"{API}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
-    if not url.lower().startswith("https://"):
-        raise GitHubError(f"refusing non-https URL: {url}")
+    _validate_api_url(url)
 
     req = urllib.request.Request(url, method="GET")  # noqa: S310 - scheme checked above
     req.add_header("Authorization", f"Bearer {token()}")
@@ -87,15 +96,16 @@ def request(path: str, params: dict | None = None, *, method: str = "GET") -> tu
     req.add_header("User-Agent", UA)
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 - scheme checked above
+        opener = urllib.request.build_opener(APIOnlyRedirect())
+        with opener.open(req, timeout=30) as resp:
             headers = dict(resp.headers)
-            body = resp.read().decode("utf-8")
+            body = resp.read()
     except urllib.error.HTTPError as err:
         if err.code in (403, 429):
             remaining = err.headers.get("X-RateLimit-Remaining")
             if remaining == "0" or err.headers.get("Retry-After"):
                 reset = err.headers.get("X-RateLimit-Reset")
-                raise RateLimited(int(reset) if reset else None) from err
+                raise RateLimited(int(reset) if reset and reset.isdigit() else None) from err
         # Pulling GitHub's own message out of the body makes the difference
         # between "HTTP 404" and "Not Found - the repository may be private".
         # It must never itself raise: failing to decode an error body would
@@ -107,7 +117,13 @@ def request(path: str, params: dict | None = None, *, method: str = "GET") -> tu
     except urllib.error.URLError as err:
         raise GitHubError(f"network error for {url}: {err.reason}") from err
 
-    return (json.loads(body) if body else {}), headers
+    try:
+        parsed_body = json.loads(body) if body else {}
+    except (ValueError, UnicodeError) as err:
+        raise GitHubError('GitHub returned invalid JSON') from err
+    if not isinstance(parsed_body, (dict, list)):
+        raise GitHubError('GitHub returned an unexpected JSON shape')
+    return parsed_body, headers
 
 
 def paged(path: str, params: dict | None = None, *, limit: int = 100) -> list:
@@ -127,7 +143,8 @@ def paged(path: str, params: dict | None = None, *, limit: int = 100) -> list:
         if not items:
             break
         out.extend(items)
-        url = _next_link(headers.get("Link", ""))
+        link = next((value for key, value in headers.items() if key.lower() == 'link'), '')
+        url = _next_link(link)
     return out[:limit]
 
 
